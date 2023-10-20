@@ -3,7 +3,7 @@ name = "WGpuPlayground"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+#WASM build => wasm-pack build . --target web
 
 [dependencies]
 winit = "0.28.7"
@@ -12,8 +12,8 @@ log = "0.4"
 wgpu = "0.17"
 cfg-if = "1"
 
-#[lib]
-#crate-type = ["cdylib", "rlib"]
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.6"

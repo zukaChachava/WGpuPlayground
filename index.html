@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Wasm Playground</title>
+    <style>
+        canvas {
+            background-color: black;
+        }
+    </style>
+</head>
+<body>
+    <script type="module">
+        import init from './pkg/WGpuPlayground.js'
+        
+        init()
+            .then(() => console.log("Wasm Loaded"))
+            .catch((error) => {console.log(error)});
+    </script>
+</body>
+</html>
