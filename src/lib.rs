@@ -1,4 +1,4 @@
-use wgpu::{Backends, Dx12Compiler};
+use wgpu::{Backends, Dx12Compiler, PowerPreference};
 #[cfg(target_arch="wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -29,12 +29,30 @@ impl State{
         let size = window.inner_size();
         
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::default());
+        
+        // Actual area to draw something on that
         let surface = unsafe{ instance.create_surface(&window) }.unwrap();
+        
+        // Adapter between app and actual GPU driver
         let adapter = instance.request_adapter(&wgpu::RequestAdapterOptions{
             compatible_surface : Some(&surface),
             force_fallback_adapter: false,
-            power_preference: wgpu::PowerPreference::default()
+            power_preference: PowerPreference::HighPerformance
         }).await.unwrap();
+        
+        let (device, queue) = adapter.request_device(
+            &wgpu::DeviceDescriptor{
+                features: wgpu::Features::empty(),
+                limits: if cfg!(target_arch = "wasm32"){
+                    wgpu::Limits::downlevel_webgl2_defaults()
+                }
+                else { 
+                    wgpu::Limits::default()
+                },
+                label: None,
+            },
+            None
+        ).await.unwrap();
         
         todo!()
     }
