@@ -1,3 +1,4 @@
+use wgpu::{Backends, Dx12Compiler};
 #[cfg(target_arch="wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -11,6 +12,53 @@ use winit::
     },
     window::WindowBuilder
 };
+use winit::window::CursorIcon::Default;
+use winit::window::Window;
+
+struct State{
+    surface: wgpu::Surface,
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    config: wgpu::SurfaceConfiguration,
+    size: winit::dpi::PhysicalSize<u32>,
+    window: winit::window::Window
+}
+
+impl State{
+    async fn new(window: Window) -> Self{
+        let size = window.inner_size();
+        
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::default());
+        let surface = unsafe{ instance.create_surface(&window) }.unwrap();
+        let adapter = instance.request_adapter(&wgpu::RequestAdapterOptions{
+            compatible_surface : Some(&surface),
+            force_fallback_adapter: false,
+            power_preference: wgpu::PowerPreference::default()
+        }).await.unwrap();
+        
+        todo!()
+    }
+    
+    pub fn window(&self) -> &Window {
+        todo!()
+    }
+    
+    fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>){
+        todo!()
+    }
+    
+    fn input(&mut self, event: &WindowEvent) -> bool{
+        todo!()
+    }
+    
+    fn update(&mut self){
+        todo!()
+    }
+    
+    fn render(&mut self) -> Result<(), wgpu::SurfaceError>{
+        todo!()
+    }
+}
 
 pub fn run(){
     cfg_if::cfg_if! {
