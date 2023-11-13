@@ -2,6 +2,6 @@ mod lib;
 use lib::run;
 
 fn main() {
-    run();
+    pollster::block_on(run());
 }
 

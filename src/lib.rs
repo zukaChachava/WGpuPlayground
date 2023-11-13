@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use wgpu::{Backends, Dx12Compiler, PowerPreference};
 #[cfg(target_arch="wasm32")]
 use wasm_bindgen::prelude::*;
@@ -54,7 +55,32 @@ impl State{
             None
         ).await.unwrap();
         
-        todo!()
+        let surface_caps = surface.get_capabilities(&adapter);
+        let surface_format = surface_caps.formats.iter()
+            .copied()
+            .find(|f| f.is_srgb())
+            .unwrap_or(surface_caps.formats[0]);
+        
+        let config = wgpu::SurfaceConfiguration{
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: surface_format,
+            width: size.width,
+            height: size.height,
+            present_mode: surface_caps.present_modes[0],
+            alpha_mode: surface_caps.alpha_modes[0],
+            view_formats: Vec::new()
+        };
+        
+        surface.configure(&device, &config);
+        
+        Self {
+            surface,
+            device,
+            queue,
+            config,
+            size,
+            window
+        }
     }
     
     pub fn window(&self) -> &Window {
@@ -62,7 +88,12 @@ impl State{
     }
     
     fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>){
-        todo!()
+        if size.height > 0 && size.width > 0 {
+            self.size = size;
+            self.config.width = size.width;
+            self.config.height = size.height;
+            self.surface.configure(&self.device, &self.config);
+        }
     }
     
     fn input(&mut self, event: &WindowEvent) -> bool{
@@ -78,7 +109,7 @@ impl State{
     }
 }
 
-pub fn run(){
+pub async fn run(){
     cfg_if::cfg_if! {
         if #[cfg(target_arch = "wasm32")] {
             std::panic::set_hook(Box::new(console_error_panic_hook::hook));
@@ -109,12 +140,14 @@ pub fn run(){
             })
             .expect("Couldn't append canvas to document body.");
     }
+    
+    let state = State::new(window).await;
 
     event_loop.run(move |event, _ , control_flow| match event{
         Event::WindowEvent {
             ref event,
             window_id,
-        } if window_id == window.id() => match event   {
+        } if window_id == state.window.id() => match event   {
             WindowEvent::CloseRequested | WindowEvent::KeyboardInput {
                 input:
                 KeyboardInput {
