@@ -181,6 +181,7 @@ pub async fn run(){
             ref event,
             window_id,
         } if window_id == state.window.id() => if !state.input(event) {
+            println!("Win Event - 3");
             match event {
                 WindowEvent::CloseRequested | WindowEvent::KeyboardInput {
                     input:
@@ -197,6 +198,7 @@ pub async fn run(){
         },
         
         Event::RedrawRequested(window_id) if window_id == state.window.id() => {
+            println!("Redraw - 2");
             state.update();
             match state.render() {
                 Ok(_) => {},
@@ -207,6 +209,7 @@ pub async fn run(){
         },
 
         Event::MainEventsCleared => {
+            println!("Main Event Cleared - 1");
             state.window().request_redraw();
         }
         _ => {}
