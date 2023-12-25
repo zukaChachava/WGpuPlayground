@@ -19,7 +19,7 @@ use winit::window::Window;
 struct State{
     surface: wgpu::Surface,
     device: wgpu::Device,
-    queue: wgpu::Queue,
+    queue: wgpu::Queue, // Buffer of GPU instructions
     config: wgpu::SurfaceConfiguration,
     size: winit::dpi::PhysicalSize<u32>,
     window: winit::window::Window
@@ -84,7 +84,7 @@ impl State{
     }
     
     pub fn window(&self) -> &Window {
-        todo!()
+        &self.window
     }
     
     fn resize(&mut self, size: winit::dpi::PhysicalSize<u32>){
@@ -97,15 +97,48 @@ impl State{
     }
     
     fn input(&mut self, event: &WindowEvent) -> bool{
-        todo!()
+        false
     }
     
     fn update(&mut self){
-        todo!()
+        // ToDo: Still Empty
     }
     
     fn render(&mut self) -> Result<(), wgpu::SurfaceError>{
-        todo!()
+        let output = self.surface.get_current_texture()?;
+        let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        
+        
+        // Modern GPUS expect their commands to be written inside buffer. That's why we are creating
+        // encoder, which represents GPU instruction and than passing it in queue
+        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Render Encoder")
+        });
+        
+        {
+            let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor{
+                label: Some("Render Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment{
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations{
+                        load: wgpu::LoadOp::Clear(wgpu::Color{
+                            r: 0.5,
+                            g: 0.4,
+                            b: 0.9,
+                            a: 1.0,
+                        }),
+                        store: true
+                    }
+                })],
+                depth_stencil_attachment: None,
+            });
+        }
+        
+        self.queue.submit(std::iter::once(encoder.finish()));
+        output.present();
+        
+        Ok(())
     }
 }
 
@@ -141,25 +174,41 @@ pub async fn run(){
             .expect("Couldn't append canvas to document body.");
     }
     
-    let state = State::new(window).await;
+    let mut state = State::new(window).await;
 
     event_loop.run(move |event, _ , control_flow| match event{
         Event::WindowEvent {
             ref event,
             window_id,
-        } if window_id == state.window.id() => match event   {
-            WindowEvent::CloseRequested | WindowEvent::KeyboardInput {
-                input:
-                KeyboardInput {
-                    state: ElementState::Pressed,
-                    virtual_keycode: Some(VirtualKeyCode::Escape),
+        } if window_id == state.window.id() => if !state.input(event) {
+            match event {
+                WindowEvent::CloseRequested | WindowEvent::KeyboardInput {
+                    input:
+                    KeyboardInput {
+                        state: ElementState::Pressed,
+                        virtual_keycode: Some(VirtualKeyCode::Escape),
+                        ..
+                    },
                     ..
-                },
-                ..
+                } => *control_flow = ControlFlow::Exit,
+                
+                _ => {}
             }
-            => *control_flow = ControlFlow::Exit,
-            _ => {}
         },
+        
+        Event::RedrawRequested(window_id) if window_id == state.window.id() => {
+            state.update();
+            match state.render() {
+                Ok(_) => {},
+                Err(wgpu::SurfaceError::Lost) => state.resize(state.size),
+                Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+                Err(e) => eprintln!("{:?}", e)
+            }
+        },
+
+        Event::MainEventsCleared => {
+            state.window().request_redraw();
+        }
         _ => {}
     });
 }
