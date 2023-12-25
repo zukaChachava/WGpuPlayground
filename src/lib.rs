@@ -122,6 +122,7 @@ impl State{
                     view: &view,
                     resolve_target: None,
                     ops: wgpu::Operations{
+                        // Tell frame what happens to previous frame
                         load: wgpu::LoadOp::Clear(wgpu::Color{
                             r: 0.5,
                             g: 0.4,
