@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use wgpu::{Backends, Dx12Compiler, PowerPreference};
+use wgpu::util::DeviceExt;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
@@ -26,6 +27,8 @@ struct State {
     window: winit::window::Window,
     // Pipeline
     render_pipeline: wgpu::RenderPipeline,
+    // Buffer
+    vertex_buffer: wgpu::Buffer
 }
 
 impl State {
@@ -130,6 +133,15 @@ impl State {
             },
             multiview: None,
         });
+        
+        // Buffer
+        let vertex_buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor{
+                label: Some("Vertex Buffer"),
+                usage: wgpu::BufferUsages::VERTEX,
+                contents: bytemuck::cast_slice(VERTICIES)
+            }
+        );
 
         Self {
             surface,
@@ -138,7 +150,8 @@ impl State {
             config,
             size,
             window,
-            render_pipeline
+            render_pipeline,
+            vertex_buffer
         }
     }
 
@@ -205,6 +218,21 @@ impl State {
         Ok(())
     }
 }
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct Vertex{
+    position: [f32; 3], // 3D Space x, y, z
+    color: [f32; 3] // R G B
+}
+
+const VERTICIES: &[Vertex] = &[
+    Vertex { position: [0.0, 0.5, 0.0], color: [1.0, 0.0, 0.0]},
+    Vertex {position: [-0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0]},
+    Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0]}
+];
+
+
 
 pub async fn run() {
     cfg_if::cfg_if! {
