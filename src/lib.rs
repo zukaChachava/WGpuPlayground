@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use wgpu::{Backends, Dx12Compiler, PowerPreference};
+use wgpu::{Backends, Dx12Compiler, PowerPreference, VertexAttribute};
 use wgpu::util::DeviceExt;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -28,7 +28,7 @@ struct State {
     // Pipeline
     render_pipeline: wgpu::RenderPipeline,
     // Buffer
-    vertex_buffer: wgpu::Buffer
+    vertex_buffer: wgpu::Buffer,
 }
 
 impl State {
@@ -93,26 +93,30 @@ impl State {
                 bind_group_layouts: &[],
                 push_constant_ranges: &[],
             });
-        
-        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor{
+
+        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
-            vertex: wgpu::VertexState{
+            vertex: wgpu::VertexState {
                 entry_point: "vs_main",
                 module: &shader,
-                buffers: &[]
+                
+                // Vertex Buffer
+                buffers: &[
+                    Vertex::desc(),
+                ],
             },
-            fragment: Some(wgpu::FragmentState{
+            fragment: Some(wgpu::FragmentState {
                 entry_point: "fs_main",
                 module: &shader,
-                targets: &[Some(wgpu::ColorTargetState{
+                targets: &[Some(wgpu::ColorTargetState {
                     format: config.format,
                     blend: Some(wgpu::BlendState::REPLACE),
-                    write_mask: wgpu::ColorWrites::ALL
-                })]
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
             }),
             //2
-            primitive: wgpu::PrimitiveState{
+            primitive: wgpu::PrimitiveState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
@@ -122,24 +126,24 @@ impl State {
                 // Requires Features::DEPTH_CLIP_CONTROL
                 unclipped_depth: false,
                 // Requires Features::CONSERVATIVE_RASTERIZATION
-                conservative: false
+                conservative: false,
             },
             //3
-            depth_stencil: None, 
+            depth_stencil: None,
             multisample: wgpu::MultisampleState {
-                count: 1, 
-                mask: !0, 
-                alpha_to_coverage_enabled: false, 
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
             },
             multiview: None,
         });
-        
+
         // Buffer
         let vertex_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor{
+            &wgpu::util::BufferInitDescriptor {
                 label: Some("Vertex Buffer"),
                 usage: wgpu::BufferUsages::VERTEX,
-                contents: bytemuck::cast_slice(VERTICIES)
+                contents: bytemuck::cast_slice(VERTICIES),
             }
         );
 
@@ -151,7 +155,7 @@ impl State {
             size,
             window,
             render_pipeline,
-            vertex_buffer
+            vertex_buffer,
         }
     }
 
@@ -209,6 +213,7 @@ impl State {
 
             // Pipeline
             render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.draw(0..3, 0..1);
         }
 
@@ -221,17 +226,46 @@ impl State {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-struct Vertex{
-    position: [f32; 3], // 3D Space x, y, z
-    color: [f32; 3] // R G B
+struct Vertex {
+    position: [f32; 3],
+    // 3D Space x, y, z
+    color: [f32; 3], // R G B
+}
+
+impl Vertex {
+    // Get VertexBuffer Layout, To tell the pipeline how to read
+    fn desc() -> wgpu::VertexBufferLayout<'static> {
+        
+        /* Extended attributes Declaration
+        const ATTRIBUTES: [wgpu::VertexAttribute; 2] = [ // Attributes of Vertex Struct Fields. 1:1 Mapping
+            wgpu::VertexAttribute {
+                offset: 0, // From Where The attribute starts. Every Next Offset is sum of previous. First One is usually 0
+                shader_location: 0,
+                format: wgpu::VertexFormat::Float32x3,
+            },
+            wgpu::VertexAttribute {
+                offset: std::mem::size_of::<[f32; 3]> as wgpu::BufferAddress, // Sum Of Previous Offsets
+                shader_location: 1,
+                format: wgpu::VertexFormat::Float32x3,
+            }
+        ]; // We need constant variable to return 'static reference
+        
+         */
+        const ATTRIBUTES : [wgpu::VertexAttribute; 2] = wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3];
+
+        wgpu::VertexBufferLayout {
+            array_stride: std::mem::size_of::<Vertex> as wgpu::BufferAddress, // Item Size In Buffer, To Make Next Step
+            step_mode: wgpu::VertexStepMode::Vertex, // Per Vertex Data Or Per instance Data // ToDo: Difference ?
+            attributes: &ATTRIBUTES,
+        }
+    }
 }
 
 const VERTICIES: &[Vertex] = &[
-    Vertex { position: [0.0, 0.5, 0.0], color: [1.0, 0.0, 0.0]},
-    Vertex {position: [-0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0]},
-    Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0]}
+    Vertex { position: [0.0, 0.5, 0.0], color: [1.0, 0.0, 0.0] },
+    Vertex { position: [-0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0] },
+    Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0] }
 ];
-
 
 
 pub async fn run() {
